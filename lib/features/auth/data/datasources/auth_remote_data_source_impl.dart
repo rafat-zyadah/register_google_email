@@ -35,10 +35,6 @@ class AuthRemoteDataSourceImpl implements IAuthRemoteDataSource {
 
     if (response.statusCode == 200) {
       final jsonData = jsonDecode(response.body);
-      final token = jsonData['token']; // الحصول على الـ token
-
-      // تخزين الـ token بشكل آمن
-      await secureStorage.write(key: 'token', value: token);
 
       return User(
         id: jsonData['user']['id'],
@@ -82,31 +78,37 @@ class AuthRemoteDataSourceImpl implements IAuthRemoteDataSource {
       throw Exception('Failed to authenticate with backend');
     }
   }
+@override
+  Future<void> verifyEmail({required String email,required String code}) async {
+  final response = await http.post(
+    Uri.parse(ApiEndpoints.verifyCode), // تعديل المسار هنا
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: jsonEncode({
+      'email': email,
+      'code': code,
+    }),
+  );
 
-  // إضافة وظيفة للتحقق من الكود المرسل عبر البريد الإلكتروني
-  Future<void> verifyEmail(String email, String code) async {
-    final response = await http.post(
-      Uri.parse(ApiEndpoints.verifyCode), // تعديل المسار هنا
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode({
-        'email': email,
-        'code': code,
-      }),
-    );
+  print("Verify email response body: ${response.body}"); // طباعة response body
 
-    print(
-        "Verify email response body: ${response.body}"); // طباعة response body
+  if (response.statusCode == 200) {
+    // إذا كانت الاستجابة ناجحة، نقوم باستخراج التوكن وتخزينه
+    final jsonData = jsonDecode(response.body);
+    final token = jsonData['token']; // افترض أن التوكن في الحقل 'token'
 
-    if (response.statusCode == 200) {
-      print('Email verified successfully');
-    } else {
-      final jsonData = jsonDecode(response.body);
-      throw Exception(jsonData['message'] ?? 'Email verification failed');
-    }
+    // تخزين التوكن باستخدام FlutterSecureStorage
+    const secureStorage = FlutterSecureStorage();
+    await secureStorage.write(key: 'auth_token', value: token);
+
+    print('Email verified successfully and token stored');
+  } else {
+    final jsonData = jsonDecode(response.body);
+    throw Exception(jsonData['message'] ?? 'Email verification failed');
   }
+}
 
   // وظيفة تسجيل الخروج
   Future<void> logout() async {

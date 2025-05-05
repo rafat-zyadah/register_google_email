@@ -1,4 +1,3 @@
-
 import '../entities/user_entity.dart';
 
 abstract class AuthRepository {
@@ -9,4 +8,10 @@ abstract class AuthRepository {
   });
 
   Future<void> loginWithGoogle();
+
+  // إضافة الدالة الخاصة بالتحقق من البريد الإلكتروني
+  Future<void> verifyEmail({
+    required String email,
+    required String code,
+  });
 }

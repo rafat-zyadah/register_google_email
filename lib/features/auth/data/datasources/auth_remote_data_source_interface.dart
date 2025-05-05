@@ -8,4 +8,10 @@ abstract class IAuthRemoteDataSource {
   });
 
   Future<void> loginWithGoogle();
+
+  // إضافة الدالة الخاصة بالتحقق من البريد الإلكتروني
+  Future<void> verifyEmail({
+    required String email,
+    required String code,
+  });
 }
