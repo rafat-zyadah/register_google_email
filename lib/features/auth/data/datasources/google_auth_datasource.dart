@@ -1,5 +1,7 @@
-
+import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../../../../core/error/exceptions/exceptions.dart';
 
 class GoogleAuthDatasource {
   final GoogleSignIn _googleSignIn;
@@ -8,18 +10,37 @@ class GoogleAuthDatasource {
       : _googleSignIn = googleSignIn ??
             GoogleSignIn(
               scopes: ['email', 'profile'],
-              serverClientId: '37262958614-nq2cjc1b6k4ev2tecj530fsv7l21pf0h.apps.googleusercontent.com', // قم بتعديل Client ID هنا
+              serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ??
+                  (throw AuthException("Missing GOOGLE_SERVER_CLIENT_ID in .env")),
             );
 
+  /// Initiates Google sign-in and returns the ID token.
   Future<String?> signInAndGetIdToken() async {
-    final user = await _googleSignIn.signIn();
-    if (user == null) return null;
+    try {
+      final user = await _googleSignIn.signIn();
+      if (user == null) {
+        throw AuthException("Google Sign-In failed: User canceled the sign-in.");
+      }
 
-    final auth = await user.authentication;
-    return auth.idToken;
+      final authTokens = await user.authentication;
+      if (authTokens.idToken == null) {
+        throw AuthException("Google Sign-In failed: No ID token received.");
+      }
+
+      return authTokens.idToken;
+    } on PlatformException catch (e) {
+      throw AuthException("Google Sign-In error: ${e.message}");
+    } on Exception catch (e) {
+      throw AuthException("Error during Google sign-in: ${e.toString()}");
+    }
   }
 
+  /// Disconnects the user from Google sign-in.
   Future<void> signOut() async {
-    await _googleSignIn.disconnect();
+    try {
+      await _googleSignIn.disconnect();
+    } on Exception catch (e) {
+      throw AuthException("Error during sign-out: ${e.toString()}");
+    }
   }
 }

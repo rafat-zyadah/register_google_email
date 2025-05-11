@@ -1,27 +1,19 @@
+import 'package:dartz/dartz.dart';
 
-import '../entities/user_entity.dart';
+import '../../../../core/error/failure/failure.dart';
 import '../repositories/auth_repository.dart';
 
-abstract class RegisterUserUseCase {
-  Future<User> call({
-    required String name,
-    required String email,
-    required String password,
-  });
-}
-
-class RegisterUserUseCaseImpl implements RegisterUserUseCase {
+class RegisterUserUseCase {
   final AuthRepository repository;
 
-  RegisterUserUseCaseImpl(this.repository);
+  RegisterUserUseCase(this.repository);
 
-  @override
-  Future<User> call({
+  Future<Either<Failure, Unit>> call({ // تم تغيير نوع الإرجاع إلى Unit
     required String name,
     required String email,
     required String password,
   }) async {
-    return await repository.registerUser(
+    return repository.registerUser(
       name: name,
       email: email,
       password: password,

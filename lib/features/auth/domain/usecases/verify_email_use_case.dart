@@ -1,19 +1,21 @@
+import 'package:dartz/dartz.dart';
+
+import '../../../../core/error/failure/failure.dart';
+import '../entities/user_entity.dart'; // أضف هذا الاستيراد
 import '../repositories/auth_repository.dart';
 
-// تعريف الواجهة
-abstract class VerifyEmailUseCase {
-  Future<void> call({required String email, required String code});
-}
-
-// تطبيق الـ UseCase
-class VerifyEmailUseCaseImpl implements VerifyEmailUseCase {
+class VerifyEmailUseCase {
   final AuthRepository authRepository;
 
-  VerifyEmailUseCaseImpl(this.authRepository);
+  VerifyEmailUseCase(this.authRepository);
 
-  @override
-  Future<void> call({required String email, required String code}) async {
-    await authRepository.verifyEmail(
-        email: email, code: code); // استدعاء الدالة في الـ Repository
+  Future<Either<Failure, User>> call({ // غيّر نوع الإرجاع إلى User
+    required String email,
+    required String code,
+  }) async {
+    return await authRepository.verifyEmail(
+      email: email,
+      code: code,
+    );
   }
 }
