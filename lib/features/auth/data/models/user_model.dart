@@ -5,25 +5,26 @@ class UserModel extends User {
 
   const UserModel({
     required super.id,
-    required super.name,
     required super.email,
+    required super.authType,
     this.token,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) {
+  factory UserModel.fromJson(Map<String, dynamic> json,
+      {required String authType}) {
     return UserModel(
       id: json['id'],
-      name: json['name'],
       email: json['email'],
-      token: json['token'], 
+      authType: authType,
+      token: json['token'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,
       'email': email,
+      'authType': authType,
       if (token != null) 'token': token,
     };
   }

@@ -1,31 +1,39 @@
 import 'package:dartz/dartz.dart';
-
-import '../../../../core/error/exceptions/exceptions.dart';
+import 'package:google_register/features/auth/data/datasources/user_local_data_source.dart';
+import '../../../../core/error/exceptions/app_exception.dart';
 import '../../../../core/error/failure/failure.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../domain/validators/password_validator.dart';
 import '../datasources/auth_remote_data_source.dart';
-import '../datasources/token_local_data_source.dart';
+import '../datasources/google_auth_datasource.dart';
 import '../models/user_model.dart';
+import '../../domain/validators/email_validator.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
-  final TokenLocalDataSource tokenLocalDataSource;
+  final UserLocalDataSource localDataSource;
+  final GoogleAuthDatasource googleAuth;
 
   AuthRepositoryImpl(
     this.remoteDataSource,
-    this.tokenLocalDataSource,
+    this.localDataSource,
+    this.googleAuth,
   );
-
   @override
   Future<Either<Failure, Unit>> registerUser({
-    required String name,
     required String email,
     required String password,
   }) async {
+    if (!EmailValidator.isValid(email)) {
+      return Left(AuthFailure("Invalid email format"));
+    }
+    if (!PasswordValidator.isValid(password)) {
+      return Left(AuthFailure("Password must be at least 8 characters"));
+    }
+
     return await _handleErrors<Unit>(() async {
       await remoteDataSource.registerUser(
-        name: name,
         email: email,
         password: password,
       );
@@ -38,53 +46,227 @@ class AuthRepositoryImpl implements AuthRepository {
     return await _handleErrors<User>(() async {
       final userModel = await remoteDataSource.loginWithGoogle();
       await _saveTokenIfPresent(userModel.token);
+      await localDataSource.cacheUser(userModel);
       return userModel.toEntity();
     });
   }
 
   @override
-  Future<Either<Failure, User>> verifyEmail({
+  Future<Either<Failure, Unit>> verifyEmail({
     required String email,
     required String code,
   }) async {
-    return await _handleErrors<User>(() async {
-      final userModel = await remoteDataSource.verifyEmail(
+    return await _handleErrors<Unit>(() async {
+      await remoteDataSource.verifyEmail(
         email: email,
         code: code,
       );
+      return unit;
+    });
+  }
+
+  @override
+  Future<Either<Failure, User>> loginWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    if (!EmailValidator.isValid(email)) {
+      return Left(AuthFailure("Invalid email format"));
+    }
+    return await _handleErrors<User>(() async {
+      final userModel = await remoteDataSource.loginWithEmail(
+        email: email,
+        password: password,
+      );
       await _saveTokenIfPresent(userModel.token);
+      await localDataSource.cacheUser(userModel);
       return userModel.toEntity();
     });
   }
 
+  @override
+  Future<Either<Failure, Unit>> logout() async {
+    final tokenResult = await localDataSource.loadToken();
 
+    return await tokenResult.fold(
+      (failure) async => Left(failure),
+      (token) async {
+        if (token == null) {
+          return Left(CacheFailure("No token found"));
+        }
 
+        return await _handleErrors<Unit>(() async {
+          await remoteDataSource.logout(token);
 
+          final userResult = await localDataSource.loadUser();
 
-  Future<void> _saveTokenIfPresent(String? token) async {
-    if (token != null && token.isNotEmpty) {
-      await tokenLocalDataSource.cacheToken(token);
-    }
+          await userResult.fold(
+            (failure) async {},
+            (user) async {
+              if (user?.authType == 'google') {
+                await googleAuth.signOut();
+              }
+            },
+          );
+
+          await localDataSource.clearSession();
+
+          return unit;
+        });
+      },
+    );
   }
 
-@override
-Future<Either<Failure, User>> loginWithEmail({
-  required String email,
-  required String password,
-}) async {
-  return await _handleErrors<User>(() async {
-    final userModel = await remoteDataSource.loginWithEmail(
-      email: email,
-      password: password,
+  @override
+  Future<Either<Failure, Unit>> sendResetCodeToEmail(String email) async {
+    if (!EmailValidator.isValid(email)) {
+      return Left(AuthFailure("Invalid email format"));
+    }
+    return await _handleErrors<Unit>(() async {
+      await remoteDataSource.sendResetCodeToEmail(email);
+      return unit;
+    });
+  }
+
+  @override
+  Future<Either<Failure, Unit>> verifyResetCode(
+      String email, String code, String newPassword) async {
+    if (!EmailValidator.isValid(email)) {
+      return Left(AuthFailure("Invalid email format"));
+    }
+    if (code.length != 4) {
+      return Left(AuthFailure("Invalid reset code"));
+    }
+    if (!PasswordValidator.isValid(newPassword)) {
+      return Left(AuthFailure("Password must be at least 8 characters"));
+    }
+
+    return await _handleErrors<Unit>(() async {
+      await remoteDataSource.verifyResetCode(email, code, newPassword);
+      return unit;
+    });
+  }
+
+  @override
+  Future<Either<Failure, String?>> loadToken() async {
+    return await localDataSource.loadToken();
+  }
+
+  @override
+  Future<Either<Failure, User>> loadUser() async {
+    final result = await localDataSource.loadUser();
+    return result.fold(
+      (failure) => Left(failure),
+      (userModel) {
+        if (userModel == null) return Left(CacheFailure('No user stored'));
+        return Right(userModel.toEntity());
+      },
     );
-    await _saveTokenIfPresent(userModel.token);
-    return userModel.toEntity();
-  });
-}
+  }
 
+  @override
+  Future<Either<Failure, Unit>> requestChangeEmailCode() async {
+    final tokenResult = await localDataSource.loadToken();
 
+    return await tokenResult.fold(
+      (failure) async => Left(failure),
+      (token) async {
+        if (token == null) {
+          return Left(CacheFailure("No token found"));
+        }
 
-  Future<Either<Failure, T>> _handleErrors<T>(Future<T> Function() action) async {
+        return await _handleErrors<Unit>(() async {
+          await remoteDataSource.requestChangeEmailCode(token);
+          return unit;
+        });
+      },
+    );
+  }
+
+  @override
+  Future<Either<Failure, Unit>> verifyChangeEmailCode({
+    required String code,
+    required String newEmail,
+  }) async {
+    if (!EmailValidator.isValid(newEmail)) {
+      return Left(AuthFailure("Invalid email format"));
+    }
+    if (code.length != 4) {
+      return Left(AuthFailure("Invalid verification code"));
+    }
+
+    final tokenResult = await localDataSource.loadToken();
+
+    return await tokenResult.fold(
+      (failure) async => Left(failure),
+      (token) async {
+        if (token == null) {
+          return Left(CacheFailure("No token found"));
+        }
+
+        return await _handleErrors<Unit>(() async {
+          // 🟢 الخطوة 1: إرسال الطلب للباكند
+          await remoteDataSource.verifyChangeEmailCode(
+            code: code,
+            newEmail: newEmail,
+            token: token,
+          );
+
+          final localUserResult = await localDataSource.loadUser();
+          await localUserResult.fold(
+            (failure) async {},
+            (user) async {
+              if (user != null) {
+                final updatedUser = UserModel(
+                  id: user.id,
+                  email: newEmail,
+                  authType: user.authType,
+                  token: user.token,
+                );
+
+                await localDataSource.cacheUser(updatedUser);
+              }
+            },
+          );
+
+          return unit;
+        });
+      },
+    );
+  }
+
+  @override
+  Future<Either<Failure, Unit>> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    if (!PasswordValidator.isValid(newPassword)) {
+      return Left(AuthFailure("Password must be at least 8 characters"));
+    }
+
+    final tokenResult = await localDataSource.loadToken();
+
+    return await tokenResult.fold(
+      (failure) async => Left(failure),
+      (token) async {
+        if (token == null) {
+          return Left(CacheFailure("No token found"));
+        }
+
+        return await _handleErrors<Unit>(() async {
+          await remoteDataSource.changePassword(
+            oldPassword: oldPassword,
+            newPassword: newPassword,
+            token: token,
+          );
+          return unit;
+        });
+      },
+    );
+  }
+
+  Future<Either<Failure, T>> _handleErrors<T>(
+      Future<T> Function() action) async {
     try {
       final result = await action();
       return Right(result);
@@ -94,22 +276,26 @@ Future<Either<Failure, User>> loginWithEmail({
       return Left(AuthFailure(e.message));
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
+    } on CacheException catch (e) {
+      return Left(CacheFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
-
-
-
+  Future<void> _saveTokenIfPresent(String? token) async {
+    if (token != null && token.isNotEmpty) {
+      await localDataSource.cacheToken(token);
+    }
+  }
 }
 
 extension UserModelMapper on UserModel {
   User toEntity() {
     return User(
-      id:this.id,
-      name: name,
+      id: this.id,
       email: email,
+      authType: authType,
     );
   }
 }

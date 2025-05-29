@@ -2,18 +2,18 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/error/failure/failure.dart';
 import '../repositories/auth_repository.dart';
 
-class VerifyEmailUseCase {
-  final AuthRepository authRepository;
+class VerifyChangeEmailCodeUseCase {
+  final AuthRepository repository;
 
-  VerifyEmailUseCase(this.authRepository);
+  VerifyChangeEmailCodeUseCase(this.repository);
 
   Future<Either<Failure, Unit>> call({
-    required String email,
     required String code,
+    required String newEmail,
   }) async {
-    return await authRepository.verifyEmail(
-      email: email,
+    return repository.verifyChangeEmailCode(
       code: code,
+      newEmail: newEmail,
     );
   }
 }

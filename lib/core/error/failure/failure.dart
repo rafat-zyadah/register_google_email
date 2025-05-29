@@ -1,20 +1,11 @@
+
+export 'auth_failure.dart';
+export 'network_failure.dart';
+export 'server_failure.dart';
+export 'cache_failure.dart';
+export 'failure.dart';
 abstract class Failure {
   final String message;
   Failure(this.message);
 }
 
-class ServerFailure extends Failure {
-  ServerFailure(super.message);
-}
-
-class NetworkFailure extends Failure {
-  NetworkFailure(super.message);
-}
-
-class CacheFailure extends Failure {
-  CacheFailure(super.message);
-}
-
-class AuthFailure extends Failure {
-  AuthFailure(super.message);
-}

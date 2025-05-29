@@ -8,13 +8,11 @@ class RegisterUserUseCase {
 
   RegisterUserUseCase(this.repository);
 
-  Future<Either<Failure, Unit>> call({ // تم تغيير نوع الإرجاع إلى Unit
-    required String name,
+  Future<Either<Failure, Unit>> call({ 
     required String email,
     required String password,
   }) async {
     return repository.registerUser(
-      name: name,
       email: email,
       password: password,
     );

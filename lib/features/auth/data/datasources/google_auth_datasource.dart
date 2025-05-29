@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../../../../core/error/exceptions/exceptions.dart';
+import '../../../../core/error/exceptions/app_exception.dart';
 
 class GoogleAuthDatasource {
   final GoogleSignIn _googleSignIn;
@@ -11,7 +11,8 @@ class GoogleAuthDatasource {
             GoogleSignIn(
               scopes: ['email', 'profile'],
               serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ??
-                  (throw AuthException("Missing GOOGLE_SERVER_CLIENT_ID in .env")),
+                  (throw AuthException(
+                      "Missing GOOGLE_SERVER_CLIENT_ID in .env")),
             );
 
   /// Initiates Google sign-in and returns the ID token.
@@ -19,7 +20,8 @@ class GoogleAuthDatasource {
     try {
       final user = await _googleSignIn.signIn();
       if (user == null) {
-        throw AuthException("Google Sign-In failed: User canceled the sign-in.");
+        throw AuthException(
+            "Google Sign-In failed: User canceled the sign-in.");
       }
 
       final authTokens = await user.authentication;
