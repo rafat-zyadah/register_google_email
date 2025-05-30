@@ -4,8 +4,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-import '../../../../core/error/exceptions/app_exception.dart';
-import '../../../../core/utils/api_endpoints.dart';
+import '../../../../core/errors/exceptions/auth_exception.dart';
+import '../../../../core/errors/exceptions/network_exception.dart';
+import '../../../../core/errors/exceptions/server_exception.dart';
+import '../../../../core/util/api-endpoints/api_endpoints.dart';
 import '../models/user_model.dart';
 import 'google_auth_datasource.dart';
 

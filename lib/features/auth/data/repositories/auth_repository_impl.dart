@@ -1,12 +1,19 @@
 import 'package:dartz/dartz.dart';
-import 'package:google_register/features/auth/data/datasources/user_local_data_source.dart';
-import '../../../../core/error/exceptions/app_exception.dart';
-import '../../../../core/error/failure/failure.dart';
+import '../../../../core/errors/exceptions/auth_exception.dart';
+import '../../../../core/errors/exceptions/cache_exception.dart';
+import '../../../../core/errors/exceptions/network_exception.dart';
+import '../../../../core/errors/exceptions/server_exception.dart';
+import '../../../../core/errors/failures/app_failure.dart';
+import '../../../../core/errors/failures/auth_failure.dart';
+import '../../../../core/errors/failures/cache_failure.dart';
+import '../../../../core/errors/failures/network_failure.dart';
+import '../../../../core/errors/failures/server_failure.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/validators/password_validator.dart';
 import '../datasources/auth_remote_data_source.dart';
 import '../datasources/google_auth_datasource.dart';
+import '../datasources/user_local_data_source.dart';
 import '../models/user_model.dart';
 import '../../domain/validators/email_validator.dart';
 
@@ -21,7 +28,7 @@ class AuthRepositoryImpl implements AuthRepository {
     this.googleAuth,
   );
   @override
-  Future<Either<Failure, Unit>> registerUser({
+  Future<Either<AppFailure, Unit>> registerUser({
     required String email,
     required String password,
   }) async {
@@ -42,7 +49,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, User>> signInWithGoogle() async {
+  Future<Either<AppFailure, User>> signInWithGoogle() async {
     return await _handleErrors<User>(() async {
       final userModel = await remoteDataSource.loginWithGoogle();
       await _saveTokenIfPresent(userModel.token);
@@ -52,7 +59,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> verifyEmail({
+  Future<Either<AppFailure, Unit>> verifyEmail({
     required String email,
     required String code,
   }) async {
@@ -66,7 +73,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, User>> loginWithEmail({
+  Future<Either<AppFailure, User>> loginWithEmail({
     required String email,
     required String password,
   }) async {
@@ -85,7 +92,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> logout() async {
+  Future<Either<AppFailure, Unit>> logout() async {
     final tokenResult = await localDataSource.loadToken();
 
     return await tokenResult.fold(
@@ -118,7 +125,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> sendResetCodeToEmail(String email) async {
+  Future<Either<AppFailure, Unit>> sendResetCodeToEmail(String email) async {
     if (!EmailValidator.isValid(email)) {
       return Left(AuthFailure("Invalid email format"));
     }
@@ -129,7 +136,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> verifyResetCode(
+  Future<Either<AppFailure, Unit>> verifyResetCode(
       String email, String code, String newPassword) async {
     if (!EmailValidator.isValid(email)) {
       return Left(AuthFailure("Invalid email format"));
@@ -148,12 +155,12 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, String?>> loadToken() async {
+  Future<Either<AppFailure, String?>> loadToken() async {
     return await localDataSource.loadToken();
   }
 
   @override
-  Future<Either<Failure, User>> loadUser() async {
+  Future<Either<AppFailure, User>> loadUser() async {
     final result = await localDataSource.loadUser();
     return result.fold(
       (failure) => Left(failure),
@@ -165,7 +172,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> requestChangeEmailCode() async {
+  Future<Either<AppFailure, Unit>> requestChangeEmailCode() async {
     final tokenResult = await localDataSource.loadToken();
 
     return await tokenResult.fold(
@@ -184,7 +191,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> verifyChangeEmailCode({
+  Future<Either<AppFailure, Unit>> verifyChangeEmailCode({
     required String code,
     required String newEmail,
   }) async {
@@ -205,7 +212,6 @@ class AuthRepositoryImpl implements AuthRepository {
         }
 
         return await _handleErrors<Unit>(() async {
-          // 🟢 الخطوة 1: إرسال الطلب للباكند
           await remoteDataSource.verifyChangeEmailCode(
             code: code,
             newEmail: newEmail,
@@ -236,7 +242,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> changePassword({
+  Future<Either<AppFailure, Unit>> changePassword({
     required String oldPassword,
     required String newPassword,
   }) async {
@@ -265,7 +271,7 @@ class AuthRepositoryImpl implements AuthRepository {
     );
   }
 
-  Future<Either<Failure, T>> _handleErrors<T>(
+  Future<Either<AppFailure, T>> _handleErrors<T>(
       Future<T> Function() action) async {
     try {
       final result = await action();

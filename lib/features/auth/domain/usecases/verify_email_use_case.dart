@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failure/failure.dart';
+import '../../../../core/errors/failures/app_failure.dart';
 import '../repositories/auth_repository.dart';
 
 class VerifyEmailUseCase {
@@ -7,7 +7,7 @@ class VerifyEmailUseCase {
 
   VerifyEmailUseCase(this.authRepository);
 
-  Future<Either<Failure, Unit>> call({
+  Future<Either<AppFailure, Unit>> call({
     required String email,
     required String code,
   }) async {

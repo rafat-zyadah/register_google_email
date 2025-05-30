@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 
-import '../../../../core/error/failure/failure.dart';
+import '../../../../core/errors/failures/app_failure.dart';
+import '../../../../core/errors/failures/auth_failure.dart';
 import '../repositories/auth_repository.dart';
 
 class ChangePasswordUseCase {
@@ -8,7 +9,7 @@ class ChangePasswordUseCase {
 
   ChangePasswordUseCase(this.repository);
 
-  Future<Either<Failure, Unit>> call({
+  Future<Either<AppFailure, Unit>> call({
     required String oldPassword,
     required String newPassword,
     required String confirmPassword,

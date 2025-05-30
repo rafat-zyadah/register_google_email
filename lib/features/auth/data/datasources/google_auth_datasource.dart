@@ -1,7 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../../../../core/error/exceptions/app_exception.dart';
+
+import '../../../../core/errors/exceptions/auth_exception.dart';
 
 class GoogleAuthDatasource {
   final GoogleSignIn _googleSignIn;

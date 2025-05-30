@@ -1,5 +1,5 @@
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failure/failure.dart';
+import '../../../../core/errors/failures/app_failure.dart';
 import '../entities/user_entity.dart';
 import '../repositories/auth_repository.dart';
 
@@ -8,7 +8,7 @@ class GoogleSignInUseCase {
 
   GoogleSignInUseCase(this.repository);
 
-  Future<Either<Failure, User>> call() async {
+  Future<Either<AppFailure, User>> call() async {
     return await repository.signInWithGoogle();
   }
 }

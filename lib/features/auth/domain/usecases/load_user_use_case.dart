@@ -1,6 +1,6 @@
 import 'package:dartz/dartz.dart';
+import '../../../../core/errors/failures/app_failure.dart';
 
-import '../../../../core/error/failure/failure.dart';
 import '../entities/user_entity.dart';
 import '../repositories/auth_repository.dart';
 
@@ -9,7 +9,7 @@ class LoadUserUseCase {
 
   LoadUserUseCase(this.repository);
 
-  Future<Either<Failure, User>> call() {
+  Future<Either<AppFailure, User>> call() {
     return repository.loadUser();
   }
 }
